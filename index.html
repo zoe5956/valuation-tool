@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>估值评价工具 · PE/PB/ROE 四象限分析</title>
+<style>
+  :root{
+    --bg:#FAFAF8;
+    --card:#FFFFFF;
+    --border:#E5E3DA;
+    --text:#1A1A18;
+    --text-secondary:#6B6A64;
+    --text-tertiary:#9A9890;
+    --accent:#185FA5;
+    --accent-bg:#E6F1FB;
+    --green:#0F6E56;
+    --green-bg:#E1F5EE;
+    --green-bg2:#EAF3DE;
+    --amber:#854F0B;
+    --amber-bg:#FAEEDA;
+    --red:#791F1F;
+    --red-bg:#FCEBEB;
+    --gray:#5F5E5A;
+    --gray-bg:#F1EFE8;
+    --radius-md:8px;
+    --radius-lg:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    line-height:1.6;
+    padding:24px 16px 60px;
+  }
+  .container{max-width:680px;margin:0 auto}
+  header{margin-bottom:28px;text-align:center}
+  header h1{font-size:22px;font-weight:600;margin-bottom:6px}
+  header p{font-size:13px;color:var(--text-secondary)}
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--radius-lg);
+    padding:20px 22px;
+    margin-bottom:16px;
+  }
+  .card h2{font-size:14px;font-weight:600;margin-bottom:14px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em}
+
+  .field{margin-bottom:16px}
+  .field:last-child{margin-bottom:0}
+  .field-label{display:flex;justify-content:space-between;font-size:13px;color:var(--text-secondary);margin-bottom:6px}
+  .field-label b{color:var(--text);font-weight:600;font-size:14px}
+  .field-row{display:flex;align-items:center;gap:10px}
+  input[type=range]{
+    flex:1;height:4px;border-radius:2px;background:var(--border);
+    -webkit-appearance:none;appearance:none;outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;
+    width:18px;height:18px;border-radius:50%;
+    background:var(--accent);cursor:pointer;border:2px solid #fff;
+    box-shadow:0 0 0 1px var(--border);
+  }
+  input[type=range]::-moz-range-thumb{
+    width:18px;height:18px;border-radius:50%;
+    background:var(--accent);cursor:pointer;border:2px solid #fff;
+    box-shadow:0 0 0 1px var(--border);
+  }
+  input[type=text], input[type=number]{
+    width:100%;padding:9px 12px;font-size:14px;border:1px solid var(--border);
+    border-radius:var(--radius-md);background:#fff;color:var(--text);
+    font-family:inherit;
+  }
+  input[type=text]:focus, input[type=number]:focus{outline:2px solid var(--accent-bg);border-color:var(--accent)}
+
+  .zone-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}
+  .zone-mini{background:var(--gray-bg);border-radius:var(--radius-md);padding:10px;text-align:center}
+  .zone-mini-label{font-size:11px;color:var(--text-secondary);margin-bottom:4px}
+  .zone-mini-val{font-size:14px;font-weight:600}
+  .zone-mini-tag{font-size:10px;margin-top:3px}
+
+  .verdict-card{border-radius:var(--radius-lg);padding:20px 22px;margin-bottom:16px}
+  .verdict-tag{display:inline-block;font-size:12px;font-weight:600;padding:4px 12px;border-radius:12px;margin-bottom:10px}
+  .verdict-title{font-size:16px;font-weight:600;margin-bottom:8px}
+  .verdict-body{font-size:13px;line-height:1.7}
+
+  .btn-row{display:flex;gap:10px;margin-top:16px}
+  button{
+    font-family:inherit;font-size:13px;font-weight:600;
+    padding:10px 16px;border-radius:var(--radius-md);
+    border:1px solid var(--border);background:#fff;color:var(--accent);
+    cursor:pointer;transition:background .15s;
+  }
+  button:hover{background:var(--accent-bg)}
+  button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  button.primary:hover{opacity:.9;background:var(--accent)}
+  button.danger{color:var(--red)}
+  button.danger:hover{background:var(--red-bg)}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;font-size:11px;color:var(--text-secondary);font-weight:600;padding:8px 8px;border-bottom:1px solid var(--border)}
+  td{padding:10px 8px;border-bottom:1px solid var(--border);vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  .tag-pill{font-size:11px;font-weight:600;padding:3px 9px;border-radius:10px;display:inline-block;white-space:nowrap}
+  .empty-state{text-align:center;padding:24px;color:var(--text-tertiary);font-size:13px}
+  .del-btn{background:none;border:none;color:var(--text-tertiary);font-size:16px;cursor:pointer;padding:2px 6px}
+  .del-btn:hover{color:var(--red)}
+
+  footer{margin-top:30px;text-align:center;font-size:12px;color:var(--text-tertiary);line-height:1.8}
+  footer a{color:var(--accent)}
+
+  @media (max-width:480px){
+    .zone-grid{grid-template-columns:1fr 1fr}
+    table{font-size:12px}
+    th:nth-child(4), td:nth-child(4){display:none}
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>估值评价工具</h1>
+    <p>基于 PE / PB / ROE / 股息率四象限框架的选股辅助判断</p>
+  </header>
+
+  <div class="card">
+    <h2>输入指标</h2>
+
+    <div class="field">
+      <div class="field-label"><span>股票名称（可选，用于记录）</span></div>
+      <input type="text" id="stockName" placeholder="例如：贵州茅台 / 600519">
+    </div>
+
+    <div class="field">
+      <div class="field-label"><span>市盈率 PE</span><b id="peOut">25</b></div>
+      <div class="field-row"><input type="range" id="pe" min="0" max="150" value="25" step="1"></div>
+    </div>
+
+    <div class="field">
+      <div class="field-label"><span>净资产收益率 ROE (%)</span><b id="roeOut">15</b></div>
+      <div class="field-row"><input type="range" id="roe" min="-10" max="40" value="15" step="0.5"></div>
+    </div>
+
+    <div class="field">
+      <div class="field-label"><span>市净率 PB</span><b id="pbOut">2.5</b></div>
+      <div class="field-row"><input type="range" id="pb" min="0" max="15" value="2.5" step="0.1"></div>
+    </div>
+
+    <div class="field">
+      <div class="field-label"><span>股息率 (%)</span><b id="divOut">2</b></div>
+      <div class="field-row"><input type="range" id="div" min="0" max="12" value="2" step="0.1"></div>
+    </div>
+
+    <div class="field">
+      <div class="field-label"><span>同行业平均 PE（用于相对比较）</span><b id="indpeOut">25</b></div>
+      <div class="field-row"><input type="range" id="indpe" min="5" max="100" value="25" step="1"></div>
+    </div>
+
+    <div class="zone-grid">
+      <div class="zone-mini">
+        <div class="zone-mini-label">PE 区间</div>
+        <div class="zone-mini-val" id="peZoneVal">合理</div>
+        <div class="zone-mini-tag" id="peZoneTag"></div>
+      </div>
+      <div class="zone-mini">
+        <div class="zone-mini-label">ROE 区间</div>
+        <div class="zone-mini-val" id="roeZoneVal">良好</div>
+        <div class="zone-mini-tag" id="roeZoneTag"></div>
+      </div>
+      <div class="zone-mini">
+        <div class="zone-mini-label">股息 区间</div>
+        <div class="zone-mini-val" id="divZoneVal">一般</div>
+        <div class="zone-mini-tag" id="divZoneTag"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="verdict-card" id="verdictCard">
+    <span class="verdict-tag" id="verdictTag"></span>
+    <div class="verdict-title" id="verdictTitle"></div>
+    <div class="verdict-body" id="verdictBody"></div>
+    <div class="btn-row">
+      <button class="primary" id="saveBtn">保存这条评价记录</button>
+      <button id="resetBtn">重置指标</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>历史记录</h2>
+    <div id="historyWrap">
+      <div class="empty-state">还没有保存的记录，点击上方"保存这条评价记录"开始建立你的评价档案</div>
+    </div>
+  </div>
+
+  <footer>
+    数据为手动输入，不连接实时行情，需自行在东方财富 / 同花顺等平台查询最新 PE、PB、ROE、股息率后填入。<br>
+    本工具仅作为投资学习辅助，不构成任何投资建议。记录保存在本机浏览器本地，不会上传到任何服务器。
+  </footer>
+
+</div>
+
+<script>
+function r1(x){return Math.round(x*10)/10}
+
+function peZone(pe){
+  if(pe<10) return {label:'低估',color:'#085041',bg:'#E1F5EE'};
+  if(pe<20) return {label:'偏低',color:'#27500A',bg:'#EAF3DE'};
+  if(pe<30) return {label:'合理',color:'#633806',bg:'#FAEEDA'};
+  if(pe<50) return {label:'偏贵',color:'#712B13',bg:'#F5C4B3'};
+  return {label:'高位/泡沫',color:'#791F1F',bg:'#F09595'};
+}
+function roeZone(roe){
+  if(roe<5) return {label:'很差',color:'#791F1F',bg:'#F09595'};
+  if(roe<10) return {label:'一般',color:'#633806',bg:'#FAEEDA'};
+  if(roe<15) return {label:'良好',color:'#27500A',bg:'#EAF3DE'};
+  if(roe<20) return {label:'优秀',color:'#085041',bg:'#E1F5EE'};
+  return {label:'卓越',color:'#04342C',bg:'#9FE1CB'};
+}
+function divZone(d){
+  if(d<1) return {label:'可忽略',color:'#5F5E5A',bg:'#F1EFE8'};
+  if(d<2) return {label:'一般',color:'#633806',bg:'#FAEEDA'};
+  if(d<4) return {label:'不错',color:'#27500A',bg:'#EAF3DE'};
+  if(d<6) return {label:'高息股',color:'#085041',bg:'#E1F5EE'};
+  return {label:'很高需核实',color:'#04342C',bg:'#9FE1CB'};
+}
+
+function computeVerdict(pe, roe, pb, dv, indpe){
+  var peRelCheap = pe < indpe*0.85;
+  var peRelExpensive = pe > indpe*1.3;
+  var roeHigh = roe>=15;
+  var roeLow = roe<8;
+
+  if(roeHigh && (peRelCheap || pe<20)){
+    return {
+      tag:'价值洼地', tagBg:'#9FE1CB', tagColor:'#04342C', cardBg:'#E1F5EE',
+      title:'ROE高 + PE低（或低于同行）— 值得重点研究',
+      body:'盈利能力强，估值并不贵，属于四象限里最值得深入研究的区域。需要进一步确认 ROE 是否连续多年稳定，而非单年因非经常性损益冲高。'
+    };
+  } else if(roeHigh && peRelExpensive){
+    return {
+      tag:'成长溢价', tagBg:'#FAC775', tagColor:'#412402', cardBg:'#FAEEDA',
+      title:'ROE高 + PE明显高于同行 — 市场已为成长性买单',
+      body:'公司基本面不差，但估值已经反映了较多乐观预期。需要判断未来增速能否兑现，不适合重仓追高，适合分批小仓位参与或观望回调。'
+    };
+  } else if(roeLow && peRelExpensive){
+    return {
+      tag:'双重危险', tagBg:'#F09595', tagColor:'#501313', cardBg:'#FCEBEB',
+      title:'ROE低 + PE高 — 既不便宜也不赚钱',
+      body:'缺乏业绩支撑的高估值，价格更多由情绪和资金博弈驱动。这是新手最容易踩雷的组合，建议规避或仅用极小仓位观察，不建议作为核心持仓。'
+    };
+  } else if(roeLow && (peRelCheap || pe<20)){
+    return {
+      tag:'价值陷阱', tagBg:'#D3D1C7', tagColor:'#2C2C2A', cardBg:'#F1EFE8',
+      title:'ROE低 + PE看似不高 — 便宜可能是有理由的',
+      body:'市场给出的低估值，往往反映了对公司盈利能力的真实担忧。买入前需查清楚 ROE 走低的原因，是周期性低谷还是持续性衰退。'
+    };
+  } else {
+    return {
+      tag:'中性区间', tagBg:'#B5D4F4', tagColor:'#042C53', cardBg:'#E6F1FB',
+      title:'ROE与PE均处中等水平 — 需要更多维度验证',
+      body:'单看这两个指标尚不能下结论，建议结合营收增速、行业景气度、历史PE分位数等指标进一步交叉验证。'
+    };
+  }
+}
+
+function update(){
+  var pe=parseFloat(document.getElementById('pe').value);
+  var roe=parseFloat(document.getElementById('roe').value);
+  var pb=parseFloat(document.getElementById('pb').value);
+  var dv=parseFloat(document.getElementById('div').value);
+  var indpe=parseFloat(document.getElementById('indpe').value);
+
+  document.getElementById('peOut').textContent=r1(pe);
+  document.getElementById('roeOut').textContent=r1(roe);
+  document.getElementById('pbOut').textContent=r1(pb);
+  document.getElementById('divOut').textContent=r1(dv);
+  document.getElementById('indpeOut').textContent=r1(indpe);
+
+  var pz=peZone(pe), rz=roeZone(roe), dz=divZone(dv);
+  var peZoneVal=document.getElementById('peZoneVal');
+  peZoneVal.textContent=pz.label; peZoneVal.style.color=pz.color;
+  document.getElementById('peZoneTag').textContent=r1(pe)+' 倍';
+  var roeZoneVal=document.getElementById('roeZoneVal');
+  roeZoneVal.textContent=rz.label; roeZoneVal.style.color=rz.color;
+  document.getElementById('roeZoneTag').textContent=r1(roe)+'%';
+  var divZoneVal=document.getElementById('divZoneVal');
+  divZoneVal.textContent=dz.label; divZoneVal.style.color=dz.color;
+  document.getElementById('divZoneTag').textContent=r1(dv)+'%';
+
+  var v=computeVerdict(pe, roe, pb, dv, indpe);
+  var card=document.getElementById('verdictCard');
+  card.style.background=v.cardBg;
+  var tagEl=document.getElementById('verdictTag');
+  tagEl.textContent=v.tag; tagEl.style.background=v.tagBg; tagEl.style.color=v.tagColor;
+  document.getElementById('verdictTitle').textContent=v.title;
+  document.getElementById('verdictTitle').style.color=v.tagColor;
+  var bodyEl=document.getElementById('verdictBody');
+  bodyEl.textContent=v.body; bodyEl.style.color=v.tagColor;
+
+  return {pe:r1(pe), roe:r1(roe), pb:r1(pb), dv:r1(dv), indpe:r1(indpe), verdict:v};
+}
+
+['pe','roe','pb','div','indpe'].forEach(function(id){
+  document.getElementById(id).addEventListener('input', update);
+});
+
+var STORAGE_KEY='valuation_tool_history_v1';
+
+function loadHistory(){
+  try{
+    var raw=localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){ return []; }
+}
+function saveHistory(list){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); }catch(e){}
+}
+function renderHistory(){
+  var list=loadHistory();
+  var wrap=document.getElementById('historyWrap');
+  if(list.length===0){
+    wrap.innerHTML='<div class="empty-state">还没有保存的记录，点击上方"保存这条评价记录"开始建立你的评价档案</div>';
+    return;
+  }
+  var html='<table><thead><tr><th>名称</th><th>PE / ROE</th><th>判定</th><th>日期</th><th></th></tr></thead><tbody>';
+  list.slice().reverse().forEach(function(item, idx){
+    var realIdx=list.length-1-idx;
+    html+='<tr>'+
+      '<td>'+(item.name||'未命名')+'</td>'+
+      '<td>'+item.pe+'x / '+item.roe+'%</td>'+
+      '<td><span class="tag-pill" style="background:'+item.tagBg+';color:'+item.tagColor+'">'+item.tag+'</span></td>'+
+      '<td>'+item.date+'</td>'+
+      '<td><button class="del-btn" data-idx="'+realIdx+'" title="删除">×</button></td>'+
+      '</tr>';
+  });
+  html+='</tbody></table>';
+  wrap.innerHTML=html;
+
+  wrap.querySelectorAll('.del-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var idx=parseInt(btn.getAttribute('data-idx'));
+      var list=loadHistory();
+      list.splice(idx,1);
+      saveHistory(list);
+      renderHistory();
+    });
+  });
+}
+
+document.getElementById('saveBtn').addEventListener('click', function(){
+  var state=update();
+  var name=document.getElementById('stockName').value.trim();
+  var list=loadHistory();
+  list.push({
+    name: name,
+    pe: state.pe,
+    roe: state.roe,
+    pb: state.pb,
+    dv: state.dv,
+    tag: state.verdict.tag,
+    tagBg: state.verdict.tagBg,
+    tagColor: state.verdict.tagColor,
+    date: new Date().toLocaleDateString('zh-CN')
+  });
+  saveHistory(list);
+  renderHistory();
+});
+
+document.getElementById('resetBtn').addEventListener('click', function(){
+  document.getElementById('pe').value=25;
+  document.getElementById('roe').value=15;
+  document.getElementById('pb').value=2.5;
+  document.getElementById('div').value=2;
+  document.getElementById('indpe').value=25;
+  document.getElementById('stockName').value='';
+  update();
+});
+
+update();
+renderHistory();
+</script>
+
+</body>
+</html>
